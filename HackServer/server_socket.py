@@ -1,8 +1,8 @@
 import socket
 import os ,sys
-import threading as th
 from time import sleep
 from os.path import exists
+from _thread import *
 
 # 소켓 연결할때 서버쪽에서는 자신의 로컬 ip를 적어주더라구요 ..
 HOST = '192.168.200.146'
@@ -27,7 +27,7 @@ def XXEResult(client_socket) :
                 print(ex)
         print("\n [complete] \n -- %d"%data_transferred, " byte")
 
-def getMsg(client_socket, addr) :
+def getMsg(client_socket) :
     data = str()
     msg = client_socket.recv(1024)
     while msg :
@@ -36,11 +36,17 @@ def getMsg(client_socket, addr) :
     return data
 
 def doSomething(client_socket, addr) :
-    request_type = getMsg(client_socket, addr)
-    if(request_type == "reset") :
-        logReset()
-    elif(request_type == "result") :
-        XXEResult(client_socket)
+    while True :
+        try :
+            request_type = getMsg(client_socket)
+            if(request_type == "reset") :
+                logReset()
+            elif(request_type == "result") :
+                XXEResult(client_socket)
+        except ConnectionResetError as e :
+                print('Disconnected by ' + addr[0],':',addr[1])
+                break
+    client_socket.close()
 
 if __name__ == "__main__" : 
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -51,12 +57,9 @@ if __name__ == "__main__" :
         try :
             client_socket, addr = server_socket.accept()
             print("new client Connected : {}\n".format(addr))
+            start_new_thread(doSomething, (client_socket, addr))
         except socket.error as err:
             client_socket.close()
             print("Disconnected : {}, {}\n".format(addr, err))
         except KeyboardInterrupt as key :
-            client_socket.close()
             server_socket.close()
-        do = th.Thread(doSomething, args=(client_socket, addr))
-        do.daemon = True
-        do.start()
