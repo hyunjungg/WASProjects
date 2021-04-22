@@ -4,7 +4,6 @@ from time import sleep
 from os.path import exists
 from _thread import *
 
-# 소켓 연결할때 서버쪽에서는 자신의 로컬 ip를 적어주더라구요 ..
 HOST = '192.168.200.146'
 PORT = 62162
 filename = "/var/log/apache2/access.log"
@@ -25,15 +24,13 @@ def XXEResult(client_socket) :
                     data = f.read(1024)
             except Exception as ex:
                 print(ex)
+        client_socket.recv(1024).decode("utf-8") # latency 
+        client_socket.send("end".encode("utf-8"))
         print("\n [complete] \n -- %d"%data_transferred, " byte")
 
 def getMsg(client_socket) :
-    data = str()
-    msg = client_socket.recv(1024)
-    while msg :
-        data += msg.decode('utf-8')
-        msg = client_socket.recv(1024)
-    return data
+    msg = client_socket.recv(1024).decode('utf-8')
+    return msg
 
 def doSomething(client_socket, addr) :
     while True :
@@ -43,6 +40,9 @@ def doSomething(client_socket, addr) :
                 logReset()
             elif(request_type == "result") :
                 XXEResult(client_socket)
+            elif(not request_type):
+                print('Disconnected by ' + addr[0],':',addr[1])
+                break
         except ConnectionResetError as e :
                 print('Disconnected by ' + addr[0],':',addr[1])
                 break
